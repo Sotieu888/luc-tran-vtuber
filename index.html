@@ -1,106 +1,42 @@
 <!doctype html>
-<html lang="vi">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<meta name="theme-color" content="#020711">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<title>Lục Trần V8 • Reference Avatar</title>
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
-<div id="stage">
-  <div id="artWrap">
-    <img id="art" src="luc_tran_reference.jpg" alt="Lục Trần" draggable="false">
-    <div id="aura"></div>
-    <div id="glow"></div>
-  </div>
-</div>
-<video id="camera" autoplay muted playsinline></video>
-<header><b>LỤC TRẦN</b><span id="status">Ảnh tham chiếu • Sẵn sàng</span></header>
-<section id="startCard">
-  <div class="seal">✦</div>
-  <h1>LỤC TRẦN</h1>
-  <div class="sub">REFERENCE AVATAR • V8</div>
-  <button id="start">🎥 BẬT CAMERA + MIC</button>
-  <button id="retry" hidden>↻ THỬ LẠI</button>
-  <p id="message">V8 dùng chính ảnh Lục Trần bạn cung cấp làm hình ảnh nhân vật, nên diện mạo/trang phục/aura giữ đúng ảnh tham chiếu.</p>
-  <div class="checks">
-    <span id="cameraState" class="state wait">Camera: CHỜ</span>
-    <span id="micState" class="state wait">Mic: CHỜ</span>
-    <span id="faceState" class="state wait">Face Tracking: CHỜ</span>
-  </div>
-  <div id="permission" hidden></div>
-</section>
-<div id="controls" hidden>
-  <button id="reset">◎</button><button id="mic">🎙</button><button id="mirror">⇋</button><button id="fx">✦</button>
-</div>
-<div id="tip">Nghiêng đầu • Camera/Mic • Parallax theo khuôn mặt • Aura</div>
-<script>
-const $=id=>document.getElementById(id);
-const video=$("camera"), start=$("start"), retry=$("retry"), art=$("art"), artWrap=$("artWrap"), aura=$("aura"), glow=$("glow");
-let stream=null,audio=null,analyser=null,audioData=null,muted=false,fx=true,mirrored=false,running=false,faceLoaded=false,faceSeen=false,landmarker=null,lastVideoTime=-1;
-let tr={x:0,y:0,r:0,voice:0};
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const lerp=(a,b,k)=>a+(b-a)*k;
-function state(id,text,type){$(id).textContent=text;$(id).className="state "+type}
-function msg(s){$("message").textContent=s}
-function help(n){return "iPhone: Cài đặt → Ứng dụng → Safari → "+n+" → Hỏi hoặc Cho phép. Sau đó quay lại trang và bấm THỬ LẠI."}
-function err(title,detail,fix){$("status").textContent=title;msg(detail);$("permission").hidden=false;$("permission").innerHTML="<b>Hướng dẫn:</b><br>"+fix;$("permission").className="error";start.hidden=false;retry.hidden=false}
-async function requestMedia(){
- if(!window.isSecureContext||!navigator.mediaDevices?.getUserMedia){let e=new Error("API unavailable");e.name="Unsupported";throw e}
- try{
-  const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"user"},width:{ideal:720},height:{ideal:1280},frameRate:{ideal:30,max:30}},audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}});
-  stream=s;video.srcObject=s;await video.play();
-  return {camera:s.getVideoTracks().some(t=>t.readyState==="live"),mic:s.getAudioTracks().some(t=>t.readyState==="live")}
- }catch(e){throw e}
-}
-async function setupMic(){
- const trk=stream?.getAudioTracks?.()[0]; if(!trk)return false;
- const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;
- try{audio=new AC();await audio.resume();const src=audio.createMediaStreamSource(new MediaStream([trk]));analyser=audio.createAnalyser();analyser.fftSize=256;analyser.smoothingTimeConstant=.7;audioData=new Uint8Array(analyser.fftSize);src.connect(analyser);return true}catch(e){return false}
-}
-async function loadFace(){
- try{
-  const mod=await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/+esm");
-  const FS=await mod.FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm");
-  landmarker=await mod.FaceLandmarker.createFromOptions(FS,{baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"},runningMode:"VIDEO",numFaces:1});
-  faceLoaded=true;state("faceState","Face Tracking: ĐÃ TẢI","ok");return true;
- }catch(e){state("faceState","Face Tracking: LỖI","bad");return false}
-}
-function readMic(){if(!analyser||muted){tr.voice=lerp(tr.voice,0,.2);return}analyser.getByteTimeDomainData(audioData);let q=0;for(const n of audioData){let z=(n-128)/128;q+=z*z}tr.voice=lerp(tr.voice,clamp(Math.sqrt(q/audioData.length)*4,0,1),.25)}
-function trackFace(){if(!faceLoaded||!landmarker||video.readyState<2||video.currentTime===lastVideoTime)return;lastVideoTime=video.currentTime;try{const r=landmarker.detectForVideo(video,performance.now());const p=r.faceLandmarks?.[0];if(!p)return;faceSeen=true;state("faceState","Face Tracking: OK","ok");tr.x=clamp((.5-p[1].x)*1.8,-1,1);tr.y=clamp((p[1].y-.47)*1.4,-1,1);tr.r=clamp(Math.atan2(p[263].y-p[33].y,p[263].x-p[33].x),-.55,.55)}catch(e){}}
-function render(){
- readMic();trackFace();
- const x=tr.x*14,y=tr.y*9,rot=tr.r*1.8,scale=1+tr.voice*.008;
- art.style.transform=`translate3d(${x}px,${y}px,0) rotate(${rot}deg) scale(${scale}) ${mirrored?'scaleX(-1)':''}`;
- artWrap.style.setProperty('--px',`${x*.18}px`);artWrap.style.setProperty('--py',`${y*.18}px`);
- glow.style.opacity=fx?(0.25+tr.voice*.25):0;aura.style.opacity=fx?(0.55+tr.voice*.35):0;
- requestAnimationFrame(render)
-}
-async function startApp(){
- start.disabled=true;retry.hidden=true;$("permission").hidden=true;msg("Đang xin Camera + Microphone…");
- try{
-  const r=await requestMedia();
-  state("cameraState",r.camera?"Camera: OK":"Camera: LỖI",""+(r.camera?"ok":"bad"));
-  state("micState",r.mic?"Mic: OK":"Mic: LỖI",""+(r.mic?"ok":"bad"));
-  if(!r.camera||!r.mic)throw Object.assign(new Error("Thiếu quyền"),{name:"NotAllowedError"});
-  await setupMic();
-  $("startCard").hidden=true;$("controls").hidden=false;running=true;$('status').textContent='Camera + Mic • Đã kết nối';
-  msg("Camera và Mic đã hoạt động. Đang tải Face Tracking độc lập…");
-  const ok=await loadFace();
-  if(!ok)msg("Camera + Mic vẫn hoạt động; Face Tracking không tải được. Bạn có thể bấm THỬ LẠI sau.");
- }catch(e){
-  let fix="";
-  if(e.name==="NotAllowedError"||e.name==="SecurityError")fix=help("Camera / Microphone");
-  else if(e.name==="Unsupported")fix="Mở trang bằng Safari trên iPhone và dùng HTTPS GitHub Pages.";
-  else fix="Kiểm tra kết nối mạng rồi bấm THỬ LẠI.";
-  err("Không bật được Camera + Mic",e.message||"Safari đã từ chối quyền.",fix);state("cameraState","Camera: LỖI","bad");state("micState","Mic: LỖI","bad");start.disabled=false;retry.hidden=false;
- }
-}
-start.addEventListener('click',startApp);retry.addEventListener('click',startApp);
-$("reset").addEventListener('click',()=>{tr.x=tr.y=tr.r=0});$("mic").addEventListener('click',()=>{muted=!muted;$("mic").textContent=muted?'🔇':'🎙'});$("mirror").addEventListener('click',()=>{mirrored=!mirrored});$("fx").addEventListener('click',()=>{fx=!fx});
-window.addEventListener('pagehide',()=>stream?.getTracks().forEach(t=>t.stop()));
-render();
-</script>
-</body></html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lục Trần TRUE 3D</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}html,body{margin:0;background:#020712;color:#fff;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif}
+.app{max-width:760px;margin:auto;min-height:100vh}.top,.panel{margin:12px;padding:14px;border:1px solid #203a56;border-radius:18px;background:#06101d}.top{display:flex;justify-content:space-between;gap:12px}.title{font-weight:900;letter-spacing:.12em}.sub{color:#8bdcff;font-size:12px}
+#stage{margin:0 12px;height:70vh;min-height:480px;border-radius:24px;overflow:hidden;background:radial-gradient(circle at 50% 30%,#12395b,#020712 65%)}canvas{width:100%;height:100%;display:block}
+.state{display:inline-block;padding:7px 10px;border-radius:999px;background:#0b1725;color:#a9b8c8;font-size:12px;margin:2px}.ok{color:#baffd0;border:1px solid #1d6a3b}.wait{color:#ffe6a0;border:1px solid #6a5520}.bad{color:#ffbaba;border:1px solid #703333}
+button{padding:12px 14px;border:0;border-radius:13px;background:#10243a;color:#fff;font-weight:800;margin:7px 4px 0 0}.primary{background:#1477c8}
+#err{margin-top:8px;color:#b8cbe0;font-size:13px;line-height:1.45}video{display:none}
+</style></head>
+<body><div class="app">
+<div class="top"><div class="title">LỤC TRẦN</div><div class="sub">TRUE 3D • GLB</div></div>
+<div id="stage"><canvas id="view"></canvas></div><video id="video" playsinline muted></video>
+<div class="panel"><div>
+<span id="cam" class="state">Camera: CHỜ</span><span id="mic" class="state">Mic: CHỜ</span><span id="face" class="state">Face Tracking: CHỜ</span>
+</div><div>
+<button id="start" class="primary">🎥 BẬT CAMERA + MIC</button><button id="retry" hidden>↻ THỬ LẠI</button>
+<button id="mirror">⇄ Gương</button><button id="aura">✦ Aura</button><button id="reset">◎ Reset</button>
+</div><div id="err">Đầu, mắt, miệng, tóc, tay áo, kiếm và aura là các thành phần 3D riêng.</div></div></div>
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/+esm";
+import {GLTFLoader} from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/loaders/GLTFLoader.js";
+const $=id=>document.getElementById(id), video=$("video"), canvas=$("view");
+const scene=new THREE.Scene(); scene.fog=new THREE.Fog(0x020712,4,10);
+const camera=new THREE.PerspectiveCamera(32,1,.05,30); camera.position.set(0,1.25,5.2);
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true}); renderer.setPixelRatio(Math.min(devicePixelRatio,1.6)); renderer.outputColorSpace=THREE.SRGBColorSpace;
+scene.add(new THREE.HemisphereLight(0xc7ecff,0x08101d,2.1)); const key=new THREE.DirectionalLight(0xffffff,2.2);key.position.set(2,4,4);scene.add(key);
+const rim=new THREE.PointLight(0x2fa8ff,5,7);rim.position.set(-2,2,2);scene.add(rim);
+let model=null,parts={},stream=null,landmarker=null,faceReady=false,lastFace=0,lastFaceRun=0,mirror=false,auraOn=true;
+let target={x:0,y:0,r:0},smooth={x:0,y:0,r:0};
+function st(id,t,c){const e=$(id);e.textContent=t;e.className="state "+(c||"")}
+function resize(){const r=canvas.getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix()}addEventListener("resize",resize);resize();
+new GLTFLoader().load("./luc_tran_3d.glb",g=>{model=g.scene;model.position.y=-1.05;model.scale.setScalar(1.35);scene.add(model);model.traverse(o=>{if(o.isMesh)parts[o.name]=o})},undefined,e=>{$("err").textContent="Không tải được GLB: "+e.message});
+function stop(){if(stream){stream.getTracks().forEach(t=>{try{t.stop()}catch{}});stream=null}video.srcObject=null}
+async function media(){if(!navigator.mediaDevices?.getUserMedia)throw Error("Safari không hỗ trợ Camera/Microphone API.");stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"user"},width:{ideal:720},height:{ideal:1280},frameRate:{ideal:30,max:30}},audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});video.srcObject=stream;await video.play();st("cam","Camera: OK","ok");st("mic","Mic: OK","ok")}
+async function face(){try{const m=await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/+esm");const fs=await m.FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm");landmarker=await m.FaceLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"},runningMode:"VIDEO",numFaces:1});faceReady=true;st("face","Face Tracking: ĐANG QUÉT","wait")}catch(e){st("face","Face Tracking: LỖI","bad")}}
+async function start(){ $("start").disabled=true;stop();st("cam","Camera: ĐANG KẾT NỐI","wait");st("mic","Mic: ĐANG KẾT NỐI","wait");st("face","Face Tracking: CHỜ","wait");try{await media();$("retry").hidden=false;await face()}catch(e){stop();st("cam","Camera: LỖI","bad");st("mic","Mic: LỖI","bad");$("err").textContent="Không bật được Camera/Mic. Safari → Cài đặt → Ứng dụng → Safari → Camera/Microphone → Cho phép.";$("retry").hidden=false} $("start").disabled=false}
+$("start").onclick=start;$("retry").onclick=start;$("mirror").onclick=()=>mirror=!mirror;$("aura").onclick=()=>auraOn=!auraOn;$("reset").onclick=()=>{target={x:0,y:0,r:0};smooth={x:0,y:0,r:0}};
+function faceTick(now){if(!faceReady||!landmarker||video.readyState<2||now-lastFaceRun<50)return;lastFaceRun=now;try{const r=landmarker.detectForVideo(video,now),p=r.faceLandmarks?.[0];if(!p){if(now-lastFace>1400)st("face","Face Tracking: CHƯA THẤY MẶT","wait");return}lastFace=now;st("face","Face Tracking: OK","ok");target.x=THREE.MathUtils.clamp((.5-p[1].x)*1.8,-1,1);target.y=THREE.MathUtils.clamp((p[1].y-.47)*1.4,-1,1);target.r=THREE.MathUtils.clamp(Math.atan2(p[263].y-p[33].y,p[263].x-p[33].x),-.55,.55)}catch{}}
+function animate(now=0){requestAnimationFrame(animate);faceTick(now);smooth.x=THREE.MathUtils.lerp(smooth.x,target.x,.08);smooth.y=THREE.MathUtils.lerp(smooth.y,target.y,.08);smooth.r=THREE.MathUtils.lerp(smooth.r,target.r,.07);if(model){model.rotation.y=smooth.x*.20*(mirror?-1:1);model.rotation.x=-smooth.y*.10;if(parts.Head)parts.Head.rotation.z=smooth.r*.7;model.position.y=-1.05+Math.sin(now*.0017)*.008;["Hair_Cap","Hair_Lock_1","Hair_Lock_2","Hair_Lock_3","Hair_Lock_4","Hair_Lock_5","Hair_Lock_6"].forEach((n,i)=>{if(parts[n])parts[n].rotation.z+=Math.sin(now*.002+i)*.0008});["Sleeve_L","Sleeve_R"].forEach((n,i)=>{if(parts[n])parts[n].rotation.y=Math.sin(now*.0015+i)*.035});if(parts.Mouth)parts.Mouth.scale.y=1+Math.abs(Math.sin(now*.006))*.12;["Aura_Ring_1","Aura_Ring_2","Aura_Ring_3"].forEach((n,i)=>{if(parts[n]){parts[n].visible=auraOn;parts[n].rotation.z=now*.0002*(i+1)}});if(parts.Sword_Blade)parts.Sword_Blade.rotation.z=-.12+Math.sin(now*.0012)*.015}renderer.render(scene,camera)}animate();
+</script></body></html>
