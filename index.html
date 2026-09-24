@@ -30,22 +30,20 @@ button:active{transform:scale(.97)}
       <button id="surprised">😲 Surprised</button>
       <button id="aura">✦ Aura</button>
     </div>
-    <div id="status">Đang khởi tạo 3D…</div>
+    <div id="status">Đang tải Three.js và khởi tạo WebGL…</div>
   </div>
 </div>
 
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
-  }
-}
-</script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/js/controls/OrbitControls.js" crossorigin="anonymous"></script>
+<script>window.addEventListener("error",function(e){const el=document.querySelector("#status");if(el&&!window.__lucTran3DReady){el.textContent="Lỗi 3D: "+(e.message||"Không xác định");el.style.color="#ff9eaa";}});window.addEventListener("unhandledrejection",function(e){const el=document.querySelector("#status");if(el&&!window.__lucTran3DReady){el.textContent="Lỗi tải 3D: "+(e.reason?.message||e.reason||"Không xác định");el.style.color="#ff9eaa";}});</script>
+<script>
 
-<script type="module">
-import * as THREE from "three";
-import {OrbitControls} from "three/addons/controls/OrbitControls.js";
+
+if (!window.THREE) throw new Error("Three.js chưa tải được. Hãy kiểm tra Internet/CDN.");
+if (!window.THREE.OrbitControls) throw new Error("OrbitControls chưa tải được.");
+const THREE = window.THREE;
+const OrbitControls = window.THREE.OrbitControls;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x020714);
@@ -54,13 +52,16 @@ scene.fog = new THREE.FogExp2(0x020714, 0.045);
 const camera = new THREE.PerspectiveCamera(35, innerWidth/innerHeight, 0.1, 100);
 camera.position.set(0.0, 2.8, 7.6);
 
-const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+let renderer;
+try { renderer = new THREE.WebGLRenderer({antialias:true, alpha:true, powerPreference:"high-performance"}); }
+catch(e){ throw new Error("Thiết bị không khởi tạo được WebGL: " + e.message); }
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.setSize(innerWidth,innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.15;
 document.querySelector("#app").appendChild(renderer.domElement);
+renderer.domElement.style.touchAction = "none";
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -235,9 +236,11 @@ function animate(){
   controls.update();
   renderer.render(scene,camera);
 }
-animate();
+window.__lucTran3DReady = true;
 document.querySelector("#status").textContent="3D model đã sẵn sàng · kéo để xoay · pinch để zoom";
+animate();
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+
 </script>
 </body>
 </html>
