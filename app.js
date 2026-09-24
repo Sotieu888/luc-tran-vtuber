@@ -1,24 +1,227 @@
-import{FaceLandmarker,FilesetResolver}from"https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/+esm";
-const c=document.querySelector("#stage"),x=c.getContext("2d"),v=document.querySelector("#cam"),st=document.querySelector("#status");let W,H,d,face,run=false,last=-1,aur=true,mic=true,an,md,as;
-const s={x:0,y:0,r:0,b:0,m:0,l:0,tx:0,ty:0,tr:0,tb:0,tm:0,t:0},ps=Array.from({length:65},()=>({a:Math.random()*6.28,r:180+Math.random()*330}));
-function size(){W=innerWidth;H=innerHeight;d=Math.min(devicePixelRatio||1,2);c.width=W*d;c.height=H*d;x.setTransform(d,0,0,d,0,0)}addEventListener("resize",size);size();
-const cl=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),lp=(a,b,t)=>a+(b-a)*t;
-async function init(){const f=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm");face=await FaceLandmarker.createFromOptions(f,{baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"},runningMode:"VIDEO",numFaces:1,outputFaceBlendshapes:true})}
-async function micInit(){as=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});let ac=new(window.AudioContext||window.webkitAudioContext)(),src=ac.createMediaStreamSource(as);an=ac.createAnalyser();an.fftSize=256;md=new Uint8Array(an.fftSize);src.connect(an)}
-function read(){if(!an||!mic){s.l=lp(s.l,0,.3);return}an.getByteTimeDomainData(md);let q=0;for(let z of md){z=(z-128)/128;q+=z*z}s.l=lp(s.l,cl(Math.sqrt(q/md.length)*3.5),.25)}
-function track(r){let q=r.faceLandmarks?.[0];if(!q)return;s.tx=cl((.5-q[1].x)*1.8,-1,1);s.ty=cl((q[1].y-.47)*1.4,-.8,.8);s.tr=cl(Math.atan2(q[263].y-q[33].y,q[263].x-q[33].x),-.6,.6);let m=Object.fromEntries((r.faceBlendshapes?.[0]?.categories||[]).map(z=>[z.categoryName,z.score]));s.tb=cl(((m.eyeBlinkLeft||0)+(m.eyeBlinkRight||0))*.7);s.tm=cl((m.jawOpen||0)*1.7)}
-function aura(){if(!aur)return;let g=x.createRadialGradient(W/2,H*.54,20,W/2,H*.54,Math.min(W*.7,500));g.addColorStop(0,"rgba(60,190,255,.18)");g.addColorStop(1,"rgba(30,100,190,0)");x.fillStyle=g;x.beginPath();x.arc(W/2,H*.54,Math.min(W*.7,500),0,6.28);x.fill()}
-function particles(){for(let q of ps){let a=q.a+s.t*.05,r=q.r+Math.sin(s.t+q.a)*18,px=W/2+Math.cos(a)*r,py=H*.55+Math.sin(a)*r*.7;x.globalAlpha=.15+.45*Math.random();x.fillStyle="#73dcff";x.shadowColor="#38c8ff";x.shadowBlur=8;x.beginPath();x.arc(px,py,1.5,0,6.28);x.fill()}x.globalAlpha=1;x.shadowBlur=0}
-function draw(){x.clearRect(0,0,W,H);s.t+=.016;read();s.x=lp(s.x,s.tx,.15);s.y=lp(s.y,s.ty,.15);s.r=lp(s.r,s.tr,.14);s.b=lp(s.b,s.tb,.35);s.m=lp(s.m,s.tm,.3);aura();particles();let cx=W/2+s.x*W*.06,cy=H*.46+s.y*H*.03,sc=W/480;x.save();x.translate(cx,cy);x.rotate(s.r*.18);x.scale(sc,sc);
-let rg=x.createLinearGradient(-260,150,260,650);rg.addColorStop(0,"#eef6ff");rg.addColorStop(.5,"#b9cde2");rg.addColorStop(1,"#5d7898");x.fillStyle=rg;x.beginPath();x.moveTo(-250,120);x.quadraticCurveTo(-330,390,-245,680);x.lineTo(0,590);x.lineTo(245,680);x.quadraticCurveTo(330,390,250,120);x.lineTo(70,85);x.lineTo(0,220);x.lineTo(-70,85);x.closePath();x.fill();x.fillStyle="#45c6ff";x.fillRect(-170,325,340,24);
-x.fillStyle="#d9aa91";x.fillRect(-48,70,96,120);x.fillStyle="#efc1a5";x.beginPath();x.ellipse(0,-45,160,200,0,0,6.28);x.fill();x.fillStyle="#0c1422";x.beginPath();x.ellipse(0,-200,190,190,0,0,6.28);x.fill();x.beginPath();x.ellipse(0,-210,180,130,0,0,6.28);x.fill();
-for(let i=-5;i<=5;i++){let hx=i*28+s.x*25+Math.sin(s.t*1.8+i)*12; x.strokeStyle="#0b1320";x.lineWidth=20;x.lineCap="round";x.beginPath();x.moveTo(hx,-225);x.quadraticCurveTo(hx-25,-80,hx+i*10,80+Math.sin(s.t+i)*20);x.stroke()}
-x.fillStyle="#0b1320";x.beginPath();x.moveTo(-175,-190);x.quadraticCurveTo(-90,-300,0,-245);x.quadraticCurveTo(90,-300,175,-190);x.lineTo(115,-105);x.lineTo(50,-170);x.lineTo(0,-90);x.lineTo(-55,-175);x.lineTo(-120,-105);x.closePath();x.fill();
-let op=1-s.b,gx=s.x*15,gy=s.y*8;for(let z of[-1,1]){let ex=z*62;x.fillStyle="#fff";x.beginPath();x.ellipse(ex,-35,39,25*op+2,0,0,6.28);x.fill();x.fillStyle="#54caff";x.shadowColor="#42bfff";x.shadowBlur=10;x.beginPath();x.ellipse(ex+gx,-35+gy,15,17*op+2,0,0,6.28);x.fill();x.shadowBlur=0}
-let mo=cl(s.m*.8+s.l*.55),mw=25+mo*48,mh=3+mo*27;x.fillStyle="#4a1f2a";x.beginPath();x.ellipse(0,80,mw,mh,0,0,6.28);x.fill();if(mo>.22){x.fillStyle="#fff";x.fillRect(-mw*.6,73,mw*1.2,5)}
-x.strokeStyle="#8ddcff";x.lineWidth=8;x.beginPath();x.moveTo(-70,155);x.lineTo(0,235);x.lineTo(70,155);x.stroke();x.fillStyle="#71ddff";x.shadowColor="#42c9ff";x.shadowBlur=20;x.beginPath();x.arc(0,245,17,0,6.28);x.fill();x.shadowBlur=0;x.restore();
-x.save();x.translate(cx+W*.24,cy+H*.06);x.rotate(-.18+s.r*.2);x.strokeStyle="#e8f8ff";x.lineWidth=10;x.shadowColor="#64d8ff";x.shadowBlur=20;x.beginPath();x.moveTo(0,150);x.lineTo(45,-230);x.stroke();x.shadowBlur=0;x.restore();
-x.fillStyle="#d7f5ff";x.font="bold 10px system-ui";x.fillText("HỆ THỐNG VẠN GIỚI",W-165,95);x.font="9px system-ui";x.fillText("Cảnh giới: Phàm nhân",W-165,112);x.fillText("Linh căn: ?",W-165,128)}
-async function start(){try{st.textContent="Đang tải…";await init();let vs=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:720},height:{ideal:1280}},audio:false});v.srcObject=vs;await v.play();await micInit();document.body.classList.add("live");document.querySelector("#tools").hidden=false;st.textContent="LIVE • Camera + Mic";run=true;requestAnimationFrame(loop)}catch(e){console.error(e);st.textContent="Cần quyền Camera + Mic";alert("Cho phép Camera và Microphone trong Safari rồi thử lại.")}}
-function loop(t){if(!run)return;if(v.readyState>=2&&v.currentTime!==last){try{track(face.detectForVideo(v,t))}catch(e){}last=v.currentTime}draw();requestAnimationFrame(loop)}
-document.querySelector("#start").onclick=start;document.querySelector("#center").onclick=()=>{s.tx=0;s.ty=0;s.tr=0};document.querySelector("#mute").onclick=e=>{mic=!mic;e.currentTarget.textContent=mic?"🎙":"🔇";if(as)as.getAudioTracks().forEach(t=>t.enabled=mic)};document.querySelector("#aura").onclick=e=>{aur=!aur;e.currentTarget.textContent=aur?"✦":"○"};draw();
+
+const c=document.querySelector("#stage");
+const x=c.getContext("2d");
+const v=document.querySelector("#cam");
+const st=document.querySelector("#status");
+const startBtn=document.querySelector("#start");
+const help=document.querySelector("#help");
+const tools=document.querySelector("#tools");
+
+let W,H,d,face=null,run=false,last=-1,aur=true,mic=true,an=null,md=null,as=null,vs=null,raf=0;
+let FaceLandmarker=null,FilesetResolver=null;
+
+const s={x:0,y:0,r:0,b:0,m:0,l:0,tx:0,ty:0,tr:0,tb:0,tm:0,t:0};
+const ps=Array.from({length:65},()=>({a:Math.random()*6.28,r:180+Math.random()*330}));
+
+function size(){
+  W=innerWidth; H=innerHeight; d=Math.min(devicePixelRatio||1,2);
+  c.width=W*d;c.height=H*d;x.setTransform(d,0,0,d,0,0);
+}
+addEventListener("resize",size); size();
+
+const cl=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
+const lp=(a,b,t)=>a+(b-a)*t;
+
+function msg(t){st.textContent=t; console.log("[Lục Trần]",t);}
+
+async function loadFace(){
+  msg("Đang tải hệ thống nhận diện…");
+  const mod=await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/+esm");
+  FaceLandmarker=mod.FaceLandmarker;
+  FilesetResolver=mod.FilesetResolver;
+  const f=await FilesetResolver.forVisionTasks(
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm"
+  );
+  face=await FaceLandmarker.createFromOptions(f,{
+    baseOptions:{
+      modelAssetPath:"https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"
+    },
+    runningMode:"VIDEO",
+    numFaces:1,
+    outputFaceBlendshapes:true
+  });
+}
+
+async function micInit(){
+  try{
+    as=await navigator.mediaDevices.getUserMedia({
+      audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}
+    });
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC) return;
+    const ac=new AC();
+    if(ac.state==="suspended") await ac.resume();
+    const src=ac.createMediaStreamSource(as);
+    an=ac.createAnalyser();
+    an.fftSize=256;
+    md=new Uint8Array(an.fftSize);
+    src.connect(an);
+  }catch(e){
+    console.warn("Mic unavailable",e);
+    mic=false;
+  }
+}
+
+function read(){
+  if(!an||!mic){s.l=lp(s.l,0,.3);return}
+  an.getByteTimeDomainData(md);
+  let q=0;
+  for(const z0 of md){const z=(z0-128)/128;q+=z*z}
+  s.l=lp(s.l,cl(Math.sqrt(q/md.length)*3.5),.25);
+}
+
+function track(r){
+  const q=r.faceLandmarks?.[0];
+  if(!q)return;
+  s.tx=cl((.5-q[1].x)*1.8,-1,1);
+  s.ty=cl((q[1].y-.47)*1.4,-.8,.8);
+  s.tr=cl(Math.atan2(q[263].y-q[33].y,q[263].x-q[33].x),-.6,.6);
+  const m=Object.fromEntries((r.faceBlendshapes?.[0]?.categories||[]).map(z=>[z.categoryName,z.score]));
+  s.tb=cl(((m.eyeBlinkLeft||0)+(m.eyeBlinkRight||0))*.7);
+  s.tm=cl((m.jawOpen||0)*1.7);
+}
+
+function aura(){
+  if(!aur)return;
+  const g=x.createRadialGradient(W/2,H*.54,20,W/2,H*.54,Math.min(W*.7,500));
+  g.addColorStop(0,"rgba(60,190,255,.18)");
+  g.addColorStop(1,"rgba(30,100,190,0)");
+  x.fillStyle=g;x.beginPath();x.arc(W/2,H*.54,Math.min(W*.7,500),0,6.28);x.fill();
+}
+
+function particles(){
+  for(const q of ps){
+    const a=q.a+s.t*.05,r=q.r+Math.sin(s.t+q.a)*18;
+    const px=W/2+Math.cos(a)*r,py=H*.55+Math.sin(a)*r*.7;
+    x.globalAlpha=.15+.45*Math.random();x.fillStyle="#73dcff";x.shadowColor="#38c8ff";x.shadowBlur=8;
+    x.beginPath();x.arc(px,py,1.5,0,6.28);x.fill();
+  }
+  x.globalAlpha=1;x.shadowBlur=0;
+}
+
+function draw(){
+  x.clearRect(0,0,W,H);s.t+=.016;read();
+  s.x=lp(s.x,s.tx,.15);s.y=lp(s.y,s.ty,.15);s.r=lp(s.r,s.tr,.14);
+  s.b=lp(s.b,s.tb,.35);s.m=lp(s.m,s.tm,.3);
+  aura();particles();
+  let cx=W/2+s.x*W*.06,cy=H*.46+s.y*H*.03,sc=W/480;
+  x.save();x.translate(cx,cy);x.rotate(s.r*.18);x.scale(sc,sc);
+
+  let rg=x.createLinearGradient(-260,150,260,650);
+  rg.addColorStop(0,"#eef6ff");rg.addColorStop(.5,"#b9cde2");rg.addColorStop(1,"#5d7898");
+  x.fillStyle=rg;x.beginPath();x.moveTo(-250,120);x.quadraticCurveTo(-330,390,-245,680);
+  x.lineTo(0,590);x.lineTo(245,680);x.quadraticCurveTo(330,390,250,120);
+  x.lineTo(70,85);x.lineTo(0,220);x.lineTo(-70,85);x.closePath();x.fill();
+
+  x.fillStyle="#45c6ff";x.fillRect(-170,325,340,24);
+  x.fillStyle="#d9aa91";x.fillRect(-48,70,96,120);
+  x.fillStyle="#efc1a5";x.beginPath();x.ellipse(0,-45,160,200,0,0,6.28);x.fill();
+  x.fillStyle="#0c1422";x.beginPath();x.ellipse(0,-200,190,190,0,0,6.28);x.fill();
+  x.beginPath();x.ellipse(0,-210,180,130,0,0,6.28);x.fill();
+
+  for(let i=-5;i<=5;i++){
+    const hx=i*28+s.x*25+Math.sin(s.t*1.8+i)*12;
+    x.strokeStyle="#0b1320";x.lineWidth=20;x.lineCap="round";
+    x.beginPath();x.moveTo(hx,-225);x.quadraticCurveTo(hx-25,-80,hx+i*10,80+Math.sin(s.t+i)*20);x.stroke();
+  }
+
+  x.fillStyle="#0b1320";x.beginPath();x.moveTo(-175,-190);x.quadraticCurveTo(-90,-300,0,-245);
+  x.quadraticCurveTo(90,-300,175,-190);x.lineTo(115,-105);x.lineTo(50,-170);x.lineTo(0,-90);
+  x.lineTo(-55,-175);x.lineTo(-120,-105);x.closePath();x.fill();
+
+  const op=1-s.b,gx=s.x*15,gy=s.y*8;
+  for(const z of[-1,1]){
+    const ex=z*62;x.fillStyle="#fff";x.beginPath();x.ellipse(ex,-35,39,25*op+2,0,0,6.28);x.fill();
+    x.fillStyle="#54caff";x.shadowColor="#42bfff";x.shadowBlur=10;
+    x.beginPath();x.ellipse(ex+gx,-35+gy,15,17*op+2,0,0,6.28);x.fill();x.shadowBlur=0;
+  }
+
+  const mo=cl(s.m*.8+s.l*.55),mw=25+mo*48,mh=3+mo*27;
+  x.fillStyle="#4a1f2a";x.beginPath();x.ellipse(0,80,mw,mh,0,0,6.28);x.fill();
+  if(mo>.22){x.fillStyle="#fff";x.fillRect(-mw*.6,73,mw*1.2,5)}
+
+  x.strokeStyle="#8ddcff";x.lineWidth=8;x.beginPath();x.moveTo(-70,155);x.lineTo(0,235);x.lineTo(70,155);x.stroke();
+  x.fillStyle="#71ddff";x.shadowColor="#42c9ff";x.shadowBlur=20;x.beginPath();x.arc(0,245,17,0,6.28);x.fill();x.shadowBlur=0;
+  x.restore();
+
+  x.save();x.translate(cx+W*.24,cy+H*.06);x.rotate(-.18+s.r*.2);x.strokeStyle="#e8f8ff";x.lineWidth=10;x.shadowColor="#64d8ff";x.shadowBlur=20;
+  x.beginPath();x.moveTo(0,150);x.lineTo(45,-230);x.stroke();x.shadowBlur=0;x.restore();
+
+  x.fillStyle="#d7f5ff";x.font="bold 10px system-ui";x.fillText("HỆ THỐNG VẠN GIỚI",W-165,95);
+  x.font="9px system-ui";x.fillText("Cảnh giới: Phàm nhân",W-165,112);x.fillText("Linh căn: ?",W-165,128);
+}
+
+async function start(){
+  if(run)return;
+  startBtn.disabled=true;
+  help.textContent="Đang xin quyền Camera…";
+  msg("Đang xin quyền Camera…");
+
+  try{
+    if(!window.isSecureContext){
+      throw new Error("Trang chưa chạy HTTPS");
+    }
+    if(!navigator.mediaDevices?.getUserMedia){
+      throw new Error("Safari không hỗ trợ camera trên trang này");
+    }
+
+    vs=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:"user",width:{ideal:720},height:{ideal:1280}},
+      audio:false
+    });
+    v.srcObject=vs;
+    await v.play();
+
+    help.textContent="Camera OK. Đang xin quyền Microphone…";
+    msg("Camera OK • đang bật mic…");
+    await micInit();
+
+    try{
+      await loadFace();
+      msg("Hệ thống đã sẵn sàng • LIVE");
+    }catch(e){
+      console.error("Face model error:",e);
+      msg("Camera + Mic đã chạy • nhận diện khuôn mặt chưa tải");
+    }
+
+    document.body.classList.add("live");
+    tools.hidden=false;
+    run=true;
+    cancelAnimationFrame(raf);
+    raf=requestAnimationFrame(loop);
+  }catch(e){
+    console.error(e);
+    startBtn.disabled=false;
+    const n=e?.name||"";
+    let t="Không thể khởi động";
+    if(n==="NotAllowedError")t="Safari đã chặn Camera/Mic";
+    else if(n==="NotFoundError")t="Không tìm thấy Camera/Mic";
+    else if(n==="NotReadableError")t="Camera đang bị ứng dụng khác dùng";
+    else if(String(e.message).includes("HTTPS"))t="Phải mở bằng link HTTPS";
+    msg(t);
+    help.textContent=t+" • kiểm tra quyền Safari rồi bấm lại.";
+    alert(t+"\n\nVào Cài đặt → Ứng dụng → Safari → Camera/Microphone → Cho phép, sau đó tải lại trang.");
+    if(vs){vs.getTracks().forEach(t=>t.stop());vs=null}
+  }
+}
+
+function loop(t){
+  if(!run)return;
+  if(face && v.readyState>=2 && v.currentTime!==last){
+    try{track(face.detectForVideo(v,t))}catch(e){console.warn(e)}
+    last=v.currentTime;
+  }
+  draw();
+  raf=requestAnimationFrame(loop);
+}
+
+startBtn.addEventListener("click",start);
+document.querySelector("#center").onclick=()=>{s.tx=0;s.ty=0;s.tr=0};
+document.querySelector("#mute").onclick=e=>{
+  mic=!mic;e.currentTarget.textContent=mic?"🎙":"🔇";
+  if(as)as.getAudioTracks().forEach(t=>t.enabled=mic);
+};
+document.querySelector("#mirror").onclick=()=>{v.style.transform=v.style.transform?"":"scaleX(-1)"};
+document.querySelector("#aura").onclick=e=>{aur=!aur;e.currentTarget.textContent=aur?"✦":"○"};
+
+draw();
