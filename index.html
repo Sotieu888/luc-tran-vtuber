@@ -4,34 +4,33 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#020711">
-<title>Lục Trần — Vạn Giới VTuber V3</title>
+<title>Lục Trần 3D — Vạn Giới</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<video id="cam" autoplay muted playsinline></video>
-<canvas id="stage"></canvas>
-
-<header>
-  <b>LỤC TRẦN</b>
-  <span id="status">Sẵn sàng</span>
-</header>
-
-<section id="intro">
+<video id="camera" autoplay muted playsinline></video>
+<canvas id="scene"></canvas>
+<div id="hud">
+  <div class="name">LỤC TRẦN</div>
+  <div id="state">Sẵn sàng</div>
+</div>
+<div id="panel">
   <div class="seal">☯</div>
   <h1>LỤC TRẦN</h1>
-  <p>VẠN GIỚI • LAYERED VTUBER</p>
+  <p>3D XIANXIA AVATAR • V4</p>
   <button id="start">🎥 BẬT CAMERA + MIC</button>
-  <small id="help">Model tách lớp: đầu • tóc • mắt • miệng • thân • tay áo • kiếm • aura</small>
-</section>
-
-<nav id="tools" hidden>
-  <button id="center">◎</button>
-  <button id="mute">🎙</button>
+  <small id="msg">Mẫu 3D: tóc đen dài • mắt lam • bạch y • Đoạn Thiên Kiếm</small>
+</div>
+<div id="buttons" hidden>
+  <button id="reset">◎</button>
+  <button id="mic">🎙</button>
   <button id="mirror">⇋</button>
-  <button id="aura">✦</button>
-</nav>
-
-<div id="hint">Nghiêng đầu • Chớp mắt • Đảo mắt • Nói vào mic</div>
+  <button id="fx">✦</button>
+</div>
+<div id="tip">Nghiêng đầu • Đảo mắt • Chớp mắt • Nói vào mic</div>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
 <script type="module" src="app.js"></script>
 </body>
 </html>
