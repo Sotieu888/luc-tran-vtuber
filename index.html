@@ -35,14 +35,41 @@ $('start').onclick=startMedia;
 async function initTracking(){
  if(tracker)return;
  try{
+  // Wait until Safari has real video dimensions.
+  if(!video.videoWidth){await new Promise(resolve=>video.addEventListener('loadeddata',resolve,{once:true}));}
   const mod=await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/+esm');
-  const {FaceLandmarker,FilesetResolver}=mod; const fs=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm');
-  tracker=await FaceLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',delegate:'GPU'},runningMode:'VIDEO',numFaces:1,minFaceDetectionConfidence:.55,minFacePresenceConfidence:.55,minTrackingConfidence:.55}); tracking=true; status.textContent='Camera ✓ Mic ✓ Face Tracking ✓'; requestAnimationFrame(track);
- }catch(e){console.error(e);tracking=false;status.textContent='Camera ✓ Mic ✓ — Face Tracking lỗi: '+(e?.message||e);}
+  const {FaceLandmarker,FilesetResolver}=mod;
+  const fs=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm');
+  const base={modelAssetPath:'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task'};
+  // Safari/iPhone is more reliable with CPU. GPU is only a fallback.
+  let lastErr=null;
+  for(const delegate of ['CPU','GPU']){
+    try{
+      tracker=await FaceLandmarker.createFromOptions(fs,{baseOptions:{...base,delegate},runningMode:'VIDEO',numFaces:1,minFaceDetectionConfidence:.45,minFacePresenceConfidence:.45,minTrackingConfidence:.45,outputFaceBlendshapes:true,outputFacialTransformationMatrixes:true});
+      tracking=true; status.textContent='Camera ✓ Mic ✓ Face Tracking ✓ ('+delegate+')';
+      lastVideoTime=-1; lastDetectTs=0; requestAnimationFrame(track); return;
+    }catch(err){ lastErr=err; tracker=null; console.warn('FaceLandmarker '+delegate+' failed',err); }
+  }
+  throw lastErr||new Error('Không tạo được FaceLandmarker');
+ }catch(e){console.error(e);tracking=false;tracker=null;status.textContent='Camera ✓ Mic ✓ — Face Tracking lỗi: '+(e?.message||e);}
 }
 function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
-let lastVideoTime=-1;
-function track(){if(!tracking||!tracker||video.readyState<2){requestAnimationFrame(track);return;} if(video.currentTime!==lastVideoTime){lastVideoTime=video.currentTime;const r=tracker.detectForVideo(video,performance.now()); if(r.faceLandmarks?.[0]){applyFace(r.faceLandmarks[0]);}else{expr('blink',0);expr('aa',0);expr('oh',0);}}requestAnimationFrame(track);}
+let lastVideoTime=-1,lastDetectTs=0;
+function track(){
+ requestAnimationFrame(track);
+ if(!tracking||!tracker||video.readyState<2||!video.videoWidth)return;
+ if(video.currentTime===lastVideoTime)return;
+ lastVideoTime=video.currentTime;
+ const now=performance.now();
+ const ts=Math.max(now,lastDetectTs+1); lastDetectTs=ts;
+ try{
+  const r=tracker.detectForVideo(video,ts);
+  if(r?.faceLandmarks?.[0]) applyFace(r.faceLandmarks[0]);
+  else {expr('blink',0);expr('aa',0);expr('oh',0);}
+ }catch(e){
+  console.warn('Face frame error',e);
+ }
+}
 function applyFace(l){if(!vrm)return;
  const nose=l[1], le=l[33], re=l[263]; const cx=(le.x+re.x)/2, eyeW=dist(le,re)||.25;
  // Head yaw/pitch from nose relative to eye midpoint, smoothed by VRM humanoid head.
