@@ -1,42 +1,64 @@
-<!doctype html>
-<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Lục Trần TRUE 3D</title>
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Lục Trần — VRM V2</title>
 <style>
-:root{color-scheme:dark}*{box-sizing:border-box}html,body{margin:0;background:#020712;color:#fff;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif}
-.app{max-width:760px;margin:auto;min-height:100vh}.top,.panel{margin:12px;padding:14px;border:1px solid #203a56;border-radius:18px;background:#06101d}.top{display:flex;justify-content:space-between;gap:12px}.title{font-weight:900;letter-spacing:.12em}.sub{color:#8bdcff;font-size:12px}
-#stage{margin:0 12px;height:70vh;min-height:480px;border-radius:24px;overflow:hidden;background:radial-gradient(circle at 50% 30%,#12395b,#020712 65%)}canvas{width:100%;height:100%;display:block}
-.state{display:inline-block;padding:7px 10px;border-radius:999px;background:#0b1725;color:#a9b8c8;font-size:12px;margin:2px}.ok{color:#baffd0;border:1px solid #1d6a3b}.wait{color:#ffe6a0;border:1px solid #6a5520}.bad{color:#ffbaba;border:1px solid #703333}
-button{padding:12px 14px;border:0;border-radius:13px;background:#10243a;color:#fff;font-weight:800;margin:7px 4px 0 0}.primary{background:#1477c8}
-#err{margin-top:8px;color:#b8cbe0;font-size:13px;line-height:1.45}video{display:none}
-</style></head>
-<body><div class="app">
-<div class="top"><div class="title">LỤC TRẦN</div><div class="sub">TRUE 3D • GLB</div></div>
-<div id="stage"><canvas id="view"></canvas></div><video id="video" playsinline muted></video>
-<div class="panel"><div>
-<span id="cam" class="state">Camera: CHỜ</span><span id="mic" class="state">Mic: CHỜ</span><span id="face" class="state">Face Tracking: CHỜ</span>
-</div><div>
-<button id="start" class="primary">🎥 BẬT CAMERA + MIC</button><button id="retry" hidden>↻ THỬ LẠI</button>
-<button id="mirror">⇄ Gương</button><button id="aura">✦ Aura</button><button id="reset">◎ Reset</button>
-</div><div id="err">Đầu, mắt, miệng, tóc, tay áo, kiếm và aura là các thành phần 3D riêng.</div></div></div>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#030712;color:#eef5ff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}#stage{position:fixed;inset:0}canvas{display:block;width:100%;height:100%}#ui{position:fixed;left:12px;right:12px;top:12px;z-index:10;pointer-events:none}.card{pointer-events:auto;max-width:520px;background:rgba(4,10,25,.82);backdrop-filter:blur(16px);border:1px solid rgba(130,190,255,.25);border-radius:18px;padding:12px;box-shadow:0 12px 50px #0008}.title{font-weight:800;font-size:18px}.sub{opacity:.7;font-size:12px;margin-top:2px}.row{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}button{border:1px solid #7db8ff44;background:#0b1830;color:#eaf4ff;border-radius:12px;padding:9px 11px;font-weight:700}button:active{transform:scale(.97)}#status{font-size:12px;margin-top:8px;color:#9dd0ff;min-height:17px}.pill{font-size:11px;padding:5px 8px;border-radius:999px;background:#0b2140;border:1px solid #7db8ff33}.cam{position:fixed;right:12px;bottom:12px;width:120px;aspect-ratio:3/4;object-fit:cover;border-radius:16px;opacity:.18;transform:scaleX(-1);border:1px solid #fff2}.hide{display:none}.danger{background:#35121a}.ok{color:#a8ffcf}.hint{font-size:11px;opacity:.62;margin-top:8px;line-height:1.35}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/","@pixiv/three-vrm":"https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.5.5/lib/three-vrm.module.min.js"}}</script>
+</head><body><div id="stage"></div><video id="cam" class="cam hide" autoplay muted playsinline></video>
+<div id="ui"><div class="card"><div class="title">LỤC TRẦN · VRM V2</div><div class="sub">Humanoid Skin + Hair/Sleeve SpringBone + Facial Expressions</div><div class="row"><button id="start">🎥 Camera + Mic</button><button id="mirror">↔️ Mirror</button><button id="reset">↻ Reset</button></div><div class="row"><button data-expr="neutral">😐</button><button data-expr="happy">😊 Happy</button><button data-expr="angry">😠 Angry</button><button data-expr="sad">😢 Sad</button><button data-expr="surprised">😲 Surprised</button></div><div id="status">Đang tải VRM…</div><div class="hint">Camera/mic chạy độc lập với VRM. Tracking: đầu · mắt · chớp · miệng. VRM V2 có skin/weight và SpringBone trong file.</div></div></div>
 <script type="module">
-import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/+esm";
-import {GLTFLoader} from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/loaders/GLTFLoader.js";
-const $=id=>document.getElementById(id), video=$("video"), canvas=$("view");
-const scene=new THREE.Scene(); scene.fog=new THREE.Fog(0x020712,4,10);
-const camera=new THREE.PerspectiveCamera(32,1,.05,30); camera.position.set(0,1.25,5.2);
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true}); renderer.setPixelRatio(Math.min(devicePixelRatio,1.6)); renderer.outputColorSpace=THREE.SRGBColorSpace;
-scene.add(new THREE.HemisphereLight(0xc7ecff,0x08101d,2.1)); const key=new THREE.DirectionalLight(0xffffff,2.2);key.position.set(2,4,4);scene.add(key);
-const rim=new THREE.PointLight(0x2fa8ff,5,7);rim.position.set(-2,2,2);scene.add(rim);
-let model=null,parts={},stream=null,landmarker=null,faceReady=false,lastFace=0,lastFaceRun=0,mirror=false,auraOn=true;
-let target={x:0,y:0,r:0},smooth={x:0,y:0,r:0};
-function st(id,t,c){const e=$(id);e.textContent=t;e.className="state "+(c||"")}
-function resize(){const r=canvas.getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix()}addEventListener("resize",resize);resize();
-new GLTFLoader().load("./luc_tran_3d.glb",g=>{model=g.scene;model.position.y=-1.05;model.scale.setScalar(1.35);scene.add(model);model.traverse(o=>{if(o.isMesh)parts[o.name]=o})},undefined,e=>{$("err").textContent="Không tải được GLB: "+e.message});
-function stop(){if(stream){stream.getTracks().forEach(t=>{try{t.stop()}catch{}});stream=null}video.srcObject=null}
-async function media(){if(!navigator.mediaDevices?.getUserMedia)throw Error("Safari không hỗ trợ Camera/Microphone API.");stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"user"},width:{ideal:720},height:{ideal:1280},frameRate:{ideal:30,max:30}},audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});video.srcObject=stream;await video.play();st("cam","Camera: OK","ok");st("mic","Mic: OK","ok")}
-async function face(){try{const m=await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/+esm");const fs=await m.FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm");landmarker=await m.FaceLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"},runningMode:"VIDEO",numFaces:1});faceReady=true;st("face","Face Tracking: ĐANG QUÉT","wait")}catch(e){st("face","Face Tracking: LỖI","bad")}}
-async function start(){ $("start").disabled=true;stop();st("cam","Camera: ĐANG KẾT NỐI","wait");st("mic","Mic: ĐANG KẾT NỐI","wait");st("face","Face Tracking: CHỜ","wait");try{await media();$("retry").hidden=false;await face()}catch(e){stop();st("cam","Camera: LỖI","bad");st("mic","Mic: LỖI","bad");$("err").textContent="Không bật được Camera/Mic. Safari → Cài đặt → Ứng dụng → Safari → Camera/Microphone → Cho phép.";$("retry").hidden=false} $("start").disabled=false}
-$("start").onclick=start;$("retry").onclick=start;$("mirror").onclick=()=>mirror=!mirror;$("aura").onclick=()=>auraOn=!auraOn;$("reset").onclick=()=>{target={x:0,y:0,r:0};smooth={x:0,y:0,r:0}};
-function faceTick(now){if(!faceReady||!landmarker||video.readyState<2||now-lastFaceRun<50)return;lastFaceRun=now;try{const r=landmarker.detectForVideo(video,now),p=r.faceLandmarks?.[0];if(!p){if(now-lastFace>1400)st("face","Face Tracking: CHƯA THẤY MẶT","wait");return}lastFace=now;st("face","Face Tracking: OK","ok");target.x=THREE.MathUtils.clamp((.5-p[1].x)*1.8,-1,1);target.y=THREE.MathUtils.clamp((p[1].y-.47)*1.4,-1,1);target.r=THREE.MathUtils.clamp(Math.atan2(p[263].y-p[33].y,p[263].x-p[33].x),-.55,.55)}catch{}}
-function animate(now=0){requestAnimationFrame(animate);faceTick(now);smooth.x=THREE.MathUtils.lerp(smooth.x,target.x,.08);smooth.y=THREE.MathUtils.lerp(smooth.y,target.y,.08);smooth.r=THREE.MathUtils.lerp(smooth.r,target.r,.07);if(model){model.rotation.y=smooth.x*.20*(mirror?-1:1);model.rotation.x=-smooth.y*.10;if(parts.Head)parts.Head.rotation.z=smooth.r*.7;model.position.y=-1.05+Math.sin(now*.0017)*.008;["Hair_Cap","Hair_Lock_1","Hair_Lock_2","Hair_Lock_3","Hair_Lock_4","Hair_Lock_5","Hair_Lock_6"].forEach((n,i)=>{if(parts[n])parts[n].rotation.z+=Math.sin(now*.002+i)*.0008});["Sleeve_L","Sleeve_R"].forEach((n,i)=>{if(parts[n])parts[n].rotation.y=Math.sin(now*.0015+i)*.035});if(parts.Mouth)parts.Mouth.scale.y=1+Math.abs(Math.sin(now*.006))*.12;["Aura_Ring_1","Aura_Ring_2","Aura_Ring_3"].forEach((n,i)=>{if(parts[n]){parts[n].visible=auraOn;parts[n].rotation.z=now*.0002*(i+1)}});if(parts.Sword_Blade)parts.Sword_Blade.rotation.z=-.12+Math.sin(now*.0012)*.015}renderer.render(scene,camera)}animate();
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
+
+const $=id=>document.getElementById(id); const status=$('status'); const video=$('cam');
+let vrm=null, stream=null, audioCtx=null, analyser=null, micData=null, mirrored=false, tracker=null, tracking=false;
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x020617);
+const camera=new THREE.PerspectiveCamera(28,innerWidth/innerHeight,.05,30); camera.position.set(0,1.55,6.2);
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:false}); renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight); renderer.outputColorSpace=THREE.SRGBColorSpace; $('stage').appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xbdd8ff,0x111827,2.2)); const dl=new THREE.DirectionalLight(0xffffff,3); dl.position.set(2,4,4); scene.add(dl);
+const lookTarget=new THREE.Object3D(); camera.add(lookTarget); lookTarget.position.set(0,0,0); scene.add(camera);
+const loader=new GLTFLoader(); loader.crossOrigin='anonymous'; loader.register(p=>new VRMLoaderPlugin(p));
+loader.load('./luc_tran_vrm_v2.vrm',g=>{vrm=g.userData.vrm; vrm.scene.traverse(o=>o.frustumCulled=false); vrm.scene.rotation.y=Math.PI; scene.add(vrm.scene); vrm.lookAt.target=lookTarget; status.textContent='VRM V2 ✓ Humanoid + Skin + SpringBone + Expressions';},p=>{if(p.total)status.textContent='Đang tải VRM '+Math.round(p.loaded/p.total*100)+'%';},e=>{console.error(e);status.textContent='Lỗi tải VRM: '+e.message;});
+function expr(name,v){if(vrm?.expressionManager)vrm.expressionManager.setValue(name,Math.max(0,Math.min(1,v)));}
+function clearExpr(){['happy','angry','sad','surprised','relaxed'].forEach(n=>expr(n,0));expr('neutral',1)}
+document.querySelectorAll('[data-expr]').forEach(b=>b.onclick=()=>{clearExpr();expr(b.dataset.expr, b.dataset.expr==='neutral'?1:.9);}); $('reset').onclick=()=>{clearExpr(); if(vrm){vrm.scene.rotation.set(0,Math.PI,0);}};
+$('mirror').onclick=()=>{mirrored=!mirrored;video.style.transform=mirrored?'scaleX(1)':'scaleX(-1)';};
+
+async function startMedia(){
+ if(!navigator.mediaDevices?.getUserMedia){status.textContent='Camera/Mic không khả dụng. Hãy mở bằng HTTPS trên Safari.';return;}
+ try{if(stream)stream.getTracks().forEach(t=>t.stop()); const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480},frameRate:{ideal:24,max:30}},audio:true});stream=s;video.srcObject=s;video.classList.remove('hide'); try{await video.play();}catch(e){}
+  try{audioCtx=new (window.AudioContext||window.webkitAudioContext)(); const src=audioCtx.createMediaStreamSource(s); analyser=audioCtx.createAnalyser(); analyser.fftSize=512; micData=new Uint8Array(analyser.fftSize);src.connect(analyser);}catch(e){}
+  status.textContent='Camera ✓  Mic ✓ — đang bật tracking…'; await initTracking();
+ }catch(e){status.textContent='Camera/Mic lỗi: '+e.name+' — '+e.message;console.error(e);}
+}
+$('start').onclick=startMedia;
+async function initTracking(){
+ if(tracker)return;
+ try{
+  const mod=await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/+esm');
+  const {FaceLandmarker,FilesetResolver}=mod; const fs=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm');
+  tracker=await FaceLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',delegate:'GPU'},runningMode:'VIDEO',numFaces:1,minFaceDetectionConfidence:.55,minFacePresenceConfidence:.55,minTrackingConfidence:.55}); tracking=true; status.textContent='Camera ✓ Mic ✓ Face Tracking ✓'; requestAnimationFrame(track);
+ }catch(e){console.error(e);tracking=false;status.textContent='Camera ✓ Mic ✓ — Face Tracking lỗi: '+(e?.message||e);}
+}
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+let lastVideoTime=-1;
+function track(){if(!tracking||!tracker||video.readyState<2){requestAnimationFrame(track);return;} if(video.currentTime!==lastVideoTime){lastVideoTime=video.currentTime;const r=tracker.detectForVideo(video,performance.now()); if(r.faceLandmarks?.[0]){applyFace(r.faceLandmarks[0]);}else{expr('blink',0);expr('aa',0);expr('oh',0);}}requestAnimationFrame(track);}
+function applyFace(l){if(!vrm)return;
+ const nose=l[1], le=l[33], re=l[263]; const cx=(le.x+re.x)/2, eyeW=dist(le,re)||.25;
+ // Head yaw/pitch from nose relative to eye midpoint, smoothed by VRM humanoid head.
+ const head=vrm.humanoid?.getNormalizedBoneNode('head'); if(head){const yaw=(nose.x-cx)/eyeW*0.9; const pitch=(nose.y-(le.y+re.y)/2)/eyeW*0.75; head.rotation.y=THREE.MathUtils.lerp(head.rotation.y,yaw,.22); head.rotation.x=THREE.MathUtils.lerp(head.rotation.x,pitch,.22);}
+ // Proper VRM LookAt target: map face gaze/position into camera space.
+ const gx=(cx-.5)*2.2, gy=(.5-((le.y+re.y)/2))*1.8; lookTarget.position.set(gx,gy,0);
+ // Eye aspect ratio for blink.
+ const blinkL=1-Math.min(1,dist(l[159],l[145])/(dist(l[33],l[133])*.42)); const blinkR=1-Math.min(1,dist(l[386],l[374])/(dist(l[362],l[263])*.42)); const blink=Math.max(blinkL,blinkR); expr('blink',blink);
+ // Mouth openness + microphone energy.
+ const mouth=dist(l[13],l[14])/(dist(l[61],l[291])||.2); let open=Math.min(1,Math.max(0,(mouth-.12)/.18)); if(analyser){analyser.getByteTimeDomainData(micData);let s=0;for(const x of micData){const q=(x-128)/128;s+=q*q;}open=Math.max(open,Math.min(1,Math.sqrt(s/micData.length)*3));}
+ expr('aa',open); expr('oh',open*.65);
+ // Eye openness affects surprise subtly when mouth opens.
+ if(open>.55 && blink<.2){expr('surprised',Math.max(0,open*.55));}
+}
+function animate(){requestAnimationFrame(animate);const dt=Math.min(.033,clock.getDelta());if(vrm)vrm.update(dt);renderer.render(scene,camera);} const clock=new THREE.Clock();animate();
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+addEventListener('pagehide',()=>{stream?.getTracks().forEach(t=>t.stop());audioCtx?.close();});
+clearExpr();
 </script></body></html>
