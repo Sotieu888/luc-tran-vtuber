@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: han-thien-mon
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: han-thien-mon-db
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+
+databases:
+  - name: han-thien-mon-db

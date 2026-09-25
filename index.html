@@ -1,246 +1,38 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Lục Trần — 3D VTuber Prototype</title>
-<style>
-html,body{margin:0;height:100%;overflow:hidden;background:#020714;color:#eaf3ff;font-family:system-ui,-apple-system,sans-serif}
-#app{position:fixed;inset:0}
-#ui{position:fixed;left:14px;right:14px;top:14px;z-index:10;pointer-events:none}
-.card{display:inline-block;max-width:min(720px,calc(100vw - 28px));padding:12px 15px;border:1px solid #2e5d91;border-radius:16px;background:rgba(3,12,29,.76);backdrop-filter:blur(12px);box-shadow:0 10px 35px #0008}
-h1{margin:0 0 3px;font-size:20px}.sub{opacity:.75;font-size:13px}
-.controls{margin-top:9px;display:flex;gap:7px;flex-wrap:wrap;pointer-events:auto}
-button{border:1px solid #315f91;border-radius:10px;background:#081a34;color:#eef7ff;padding:8px 11px;font-weight:700}
-button:active{transform:scale(.97)}
-#status{margin-top:7px;font-size:12px;color:#9ed1ff}
-</style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Hàn Thiên Môn — sơn môn tiên hiệp lưu giữ thành viên và ký ức.">
+<title>Hàn Thiên Môn | Tiên Hiệp</title><link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="app"></div>
-<div id="ui">
-  <div class="card">
-    <h1>LỤC TRẦN · 3D VTUBER</h1>
-    <div class="sub">Bạch y · tóc đen dài · mắt lam · Đoạn Thiên Kiếm · aura xanh</div>
-    <div class="controls">
-      <button id="reset">↻ Reset</button>
-      <button id="happy">😊 Happy</button>
-      <button id="angry">😠 Angry</button>
-      <button id="sad">😢 Sad</button>
-      <button id="surprised">😲 Surprised</button>
-      <button id="aura">✦ Aura</button>
-    </div>
-    <div id="status">Đang tải Three.js và khởi tạo WebGL…</div>
-  </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.min.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.180.0/examples/js/controls/OrbitControls.js" crossorigin="anonymous"></script>
-<script>window.addEventListener("error",function(e){const el=document.querySelector("#status");if(el&&!window.__lucTran3DReady){el.textContent="Lỗi 3D: "+(e.message||"Không xác định");el.style.color="#ff9eaa";}});window.addEventListener("unhandledrejection",function(e){const el=document.querySelector("#status");if(el&&!window.__lucTran3DReady){el.textContent="Lỗi tải 3D: "+(e.reason?.message||e.reason||"Không xác định");el.style.color="#ff9eaa";}});</script>
-<script>
-
-
-if (!window.THREE) throw new Error("Three.js chưa tải được. Hãy kiểm tra Internet/CDN.");
-if (!window.THREE.OrbitControls) throw new Error("OrbitControls chưa tải được.");
-const THREE = window.THREE;
-const OrbitControls = window.THREE.OrbitControls;
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x020714);
-scene.fog = new THREE.FogExp2(0x020714, 0.045);
-
-const camera = new THREE.PerspectiveCamera(35, innerWidth/innerHeight, 0.1, 100);
-camera.position.set(0.0, 2.8, 7.6);
-
-let renderer;
-try { renderer = new THREE.WebGLRenderer({antialias:true, alpha:true, powerPreference:"high-performance"}); }
-catch(e){ throw new Error("Thiết bị không khởi tạo được WebGL: " + e.message); }
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.setSize(innerWidth,innerHeight);
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
-document.querySelector("#app").appendChild(renderer.domElement);
-renderer.domElement.style.touchAction = "none";
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.target.set(0,2.45,0);
-controls.minDistance = 4.4;
-controls.maxDistance = 10;
-
-const hemi = new THREE.HemisphereLight(0xbddcff,0x08101e,2.0);
-scene.add(hemi);
-const key = new THREE.DirectionalLight(0xffffff,3.0); key.position.set(3,6,5); scene.add(key);
-const rim = new THREE.PointLight(0x4bb8ff,10,12); rim.position.set(-3,3,2); scene.add(rim);
-const blue = new THREE.PointLight(0x244dff,8,10); blue.position.set(2,1,-3); scene.add(blue);
-
-const model = new THREE.Group();
-model.name = "LucTran_VTuber";
-model.position.y = -1.15;
-scene.add(model);
-
-const mats = {
-  skin:new THREE.MeshStandardMaterial({color:0xf3d9d0,roughness:.68,metalness:0}),
-  hair:new THREE.MeshStandardMaterial({color:0x07111f,roughness:.36,metalness:.12}),
-  hairHi:new THREE.MeshStandardMaterial({color:0x182f4d,roughness:.3,metalness:.18}),
-  robe:new THREE.MeshStandardMaterial({color:0xeaf4ff,roughness:.52,metalness:.04}),
-  robe2:new THREE.MeshStandardMaterial({color:0x8fc7ff,roughness:.45,metalness:.08}),
-  dark:new THREE.MeshStandardMaterial({color:0x0a1425,roughness:.4,metalness:.18}),
-  gold:new THREE.MeshStandardMaterial({color:0xcaa75c,roughness:.28,metalness:.72}),
-  blue:new THREE.MeshStandardMaterial({color:0x4bb9ff,roughness:.22,metalness:.2,emissive:0x0a4d9b,emissiveIntensity:1.1}),
-  eye:new THREE.MeshStandardMaterial({color:0xb9ecff,roughness:.12,metalness:.1,emissive:0x164d91,emissiveIntensity:.9}),
-  pupil:new THREE.MeshStandardMaterial({color:0x07101c,roughness:.15}),
-  mouth:new THREE.MeshStandardMaterial({color:0x6f2937,roughness:.5}),
-  sword:new THREE.MeshStandardMaterial({color:0xddefff,roughness:.18,metalness:.9,emissive:0x123a76,emissiveIntensity:.5})
-};
-
-function mesh(geo,mat,name){
-  const m=new THREE.Mesh(geo,mat); m.name=name; return m;
-}
-function add(obj){model.add(obj);return obj}
-function cyl(r1,r2,h,mat,name,radial=16){
-  return mesh(new THREE.CylinderGeometry(r1,r2,h,radial),mat,name);
-}
-function box(x,y,z,mat,name){
-  return mesh(new THREE.BoxGeometry(x,y,z),mat,name);
-}
-function sphere(x,y,z,mat,name){
-  return mesh(new THREE.SphereGeometry(1,32,20),mat,name);
-}
-
-// Torso / layered white-blue xianxia robe
-const torso = add(cyl(.72,.92,1.75,mats.robe,"Robe_Body",24)); torso.position.y=1.15;
-const inner = add(cyl(.46,.55,1.35,mats.dark,"Inner_Robe",24)); inner.position.y=1.27; inner.scale.z=.7;
-const waist = add(new THREE.Mesh(new THREE.TorusGeometry(.73,.10,12,48),mats.gold)); waist.name="Gold_Waist"; waist.position.y=.62; waist.rotation.x=Math.PI/2;
-const belt = add(box(1.45,.20,.25,mats.dark,"Waist_Belt")); belt.position.set(0,.62,.47);
-
-// Neck + head
-const neck = add(cyl(.22,.24,.38,mats.skin,"Neck",20)); neck.position.y=2.18;
-const head = add(sphere(0,0,0,mats.skin,"Head")); head.position.set(0,2.78,.03); head.scale.set(.66,.78,.61);
-
-// Jaw/chin refinement
-const jaw = add(sphere(0,0,0,mats.skin,"Jaw")); jaw.position.set(0,2.54,.17); jaw.scale.set(.50,.40,.48);
-
-// Hair cap
-const cap = add(sphere(0,0,0,mats.hair,"Hair_Cap")); cap.position.set(0,3.02,-.01); cap.scale.set(.73,.69,.67);
-
-// Hair strand helper
-const hairParts=[];
-function hairStrand(points,r1=.075,r2=.018,mat=mats.hair,name="Hair"){
-  const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));
-  const g=new THREE.TubeGeometry(curve,20,r1,8,false);
-  g.scale.set(1,1,1);
-  const m=mesh(g,mat,name); add(m); hairParts.push(m); return m;
-}
-// Bangs / side locks / long back hair
-hairStrand([[-.55,3.30,.32],[-.35,3.05,.55],[-.18,2.83,.57],[-.10,2.62,.53]],.13,.025,mats.hair,"Hair_Bang_L");
-hairStrand([[.55,3.30,.32],[.35,3.05,.55],[.18,2.83,.57],[.10,2.60,.53]],.13,.025,mats.hair,"Hair_Bang_R");
-hairStrand([[-.48,3.08,.40],[-.72,2.75,.36],[-.78,2.20,.25],[-.72,1.45,.05],[-.55,.85,-.08]],.12,.025,mats.hairHi,"Hair_Long_L");
-hairStrand([[.48,3.08,.40],[.72,2.75,.36],[.78,2.20,.25],[.72,1.45,.05],[.55,.85,-.08]],.12,.025,mats.hairHi,"Hair_Long_R");
-hairStrand([[-.30,3.05,-.38],[-.52,2.55,-.45],[-.58,1.90,-.50],[-.50,1.20,-.55],[-.35,.62,-.45]],.15,.035,mats.hair,"Hair_Back_L");
-hairStrand([[.30,3.05,-.38],[.52,2.55,-.45],[.58,1.90,-.50],[.50,1.20,-.55],[.35,.62,-.45]],.15,.035,mats.hair,"Hair_Back_R");
-
-// Eyes + brows
-const eyeL=sphere(0,0,0,mats.eye,"Eye_L"); eyeL.position.set(-.245,2.86,.565); eyeL.scale.set(.15,.095,.06);
-const eyeR=sphere(0,0,0,mats.eye,"Eye_R"); eyeR.position.set(.245,2.86,.565); eyeR.scale.set(.15,.095,.06);
-const pupilL=sphere(0,0,0,mats.pupil,"Pupil_L"); pupilL.position.set(-.245,2.86,.617); pupilL.scale.set(.055,.055,.018);
-const pupilR=sphere(0,0,0,mats.pupil,"Pupil_R"); pupilR.position.set(.245,2.86,.617); pupilR.scale.set(.055,.055,.018);
-const browL=box(.28,.045,.035,mats.hair,"Brow_L"); browL.position.set(-.245,3.03,.57); browL.rotation.z=-.10;
-const browR=box(.28,.045,.035,mats.hair,"Brow_R"); browR.position.set(.245,3.03,.57); browR.rotation.z=.10;
-
-// Nose and mouth
-const nose=add(cyl(.035,.065,.16,mats.skin,"Nose",12)); nose.position.set(0,2.73,.62); nose.rotation.x=Math.PI/2;
-const mouth=add(new THREE.Mesh(new THREE.TorusGeometry(.075,.018,8,24,Math.PI),mats.mouth)); mouth.name="Mouth"; mouth.position.set(0,2.61,.585); mouth.rotation.x=Math.PI/2;
-
-// Sleeves and arms
-const sleeveL=add(cyl(.28,.48,1.15,mats.robe,"Sleeve_L",20)); sleeveL.position.set(-.88,1.33,.02); sleeveL.rotation.z=-.32;
-const sleeveR=add(cyl(.28,.48,1.15,mats.robe,"Sleeve_R",20)); sleeveR.position.set(.88,1.33,.02); sleeveR.rotation.z=.32;
-const cuffL=add(cyl(.22,.25,.28,mats.robe2,"Cuff_L",20)); cuffL.position.set(-1.10,.82,.02); cuffL.rotation.z=-.32;
-const cuffR=add(cyl(.22,.25,.28,mats.robe2,"Cuff_R",20)); cuffR.position.set(1.10,.82,.02); cuffR.rotation.z=.32;
-const handL=add(sphere(0,0,0,mats.skin,"Hand_L")); handL.position.set(-1.18,.62,.06); handL.scale.set(.18,.24,.16);
-const handR=add(sphere(0,0,0,mats.skin,"Hand_R")); handR.position.set(1.18,.62,.06); handR.scale.set(.18,.24,.16);
-
-// Layered robe tails
-for(let i=-2;i<=2;i++){
-  const panel=add(new THREE.Mesh(new THREE.ConeGeometry(.42,.95,4,1,false),i===0?mats.robe2:mats.robe));
-  panel.name="Robe_Panel_"+i; panel.position.set(i*.25,.15,-.02); panel.rotation.y=Math.PI/4 + i*.08; panel.scale.z=.75;
-}
-
-// Gold/blue ornaments
-for(const x of [-.48,.48]){
-  const o=add(new THREE.Mesh(new THREE.OctahedronGeometry(.12),mats.gold)); o.name="Gold_Ornament"; o.position.set(x,.72,.53);
-  const gem=add(new THREE.Mesh(new THREE.OctahedronGeometry(.055),mats.blue)); gem.position.copy(o.position); gem.position.z+=.08;
-}
-
-// Sword: floating beside body
-const sword=new THREE.Group(); sword.name="Doan_Thien_Sword"; sword.position.set(1.55,1.05,-.15); sword.rotation.z=-.10; add(sword);
-const blade=mesh(new THREE.BoxGeometry(.13,2.45,.06),mats.sword,"Sword_Blade"); blade.position.y=.95; sword.add(blade);
-const guard=mesh(new THREE.BoxGeometry(.60,.10,.10),mats.gold,"Sword_Guard"); guard.position.y=-.30; sword.add(guard);
-const grip=mesh(new THREE.CylinderGeometry(.07,.07,.55,12),mats.dark,"Sword_Handle"); grip.position.y=-.60; sword.add(grip);
-const gem=mesh(new THREE.OctahedronGeometry(.11),mats.blue,"Sword_Gem"); gem.position.set(0,-.30,.07); sword.add(gem);
-
-// Aura rings
-const aura=new THREE.Group(); aura.name="Aura";
-for(let i=0;i<3;i++){
-  const r=1.55+i*.38;
-  const ring=new THREE.Mesh(new THREE.TorusGeometry(r,.012,8,96),mats.blue);
-  ring.rotation.x=Math.PI/2; ring.position.y=1.55+i*.08; ring.userData.speed=.25+i*.12; aura.add(ring);
-}
-add(aura);
-
-// A few floating particles
-const pts=[];
-for(let i=0;i<90;i++){
-  const p=new THREE.Mesh(new THREE.SphereGeometry(.012+Math.random()*.018,6,6),mats.blue);
-  p.position.set((Math.random()-.5)*4,Math.random()*4.7-.3,(Math.random()-.5)*2.5);
-  p.userData.phase=Math.random()*Math.PI*2;
-  add(p); pts.push(p);
-}
-
-// Simple expression system (prototype; independent from VRM morphs)
-const base = {
-  mouthScale: mouth.scale.clone(),
-  browL: browL.rotation.z,
-  browR: browR.rotation.z
-};
-function expr(name){
-  // reset
-  mouth.scale.set(1,1,1); browL.rotation.z=base.browL; browR.rotation.z=base.browR;
-  eyeL.scale.y=.095; eyeR.scale.y=.095;
-  if(name==="happy"){mouth.scale.set(1.4,.65,1); browL.rotation.z=-.02; browR.rotation.z=.02}
-  if(name==="angry"){browL.rotation.z=-.32; browR.rotation.z=.32; eyeL.scale.y=.075; eyeR.scale.y=.075}
-  if(name==="sad"){browL.rotation.z=.20; browR.rotation.z=-.20; mouth.scale.set(.75,1.15,1)}
-  if(name==="surprised"){mouth.scale.set(1.15,1.9,1); eyeL.scale.set(1.15,.15,1); eyeR.scale.set(1.15,.15,1)}
-}
-document.querySelector("#happy").onclick=()=>expr("happy");
-document.querySelector("#angry").onclick=()=>expr("angry");
-document.querySelector("#sad").onclick=()=>expr("sad");
-document.querySelector("#surprised").onclick=()=>expr("surprised");
-document.querySelector("#reset").onclick=()=>{expr("neutral");model.rotation.set(0,0,0);controls.reset()};
-let auraOn=true;
-document.querySelector("#aura").onclick=()=>{auraOn=!auraOn;aura.visible=auraOn};
-
-let t=0;
-function animate(){
-  requestAnimationFrame(animate); t+=.016;
-  // subtle breathing
-  torso.scale.y=1+Math.sin(t*1.7)*.012;
-  // hair and sleeve secondary motion
-  hairParts.forEach((h,i)=>{h.rotation.z=Math.sin(t*1.7+i*.6)*.018; h.rotation.y=Math.cos(t*1.25+i)*.012});
-  sleeveL.rotation.z=-.32+Math.sin(t*1.4)*.025;
-  sleeveR.rotation.z=.32-Math.sin(t*1.4)*.025;
-  sword.rotation.y=Math.sin(t*.8)*.08;
-  aura.children.forEach((r,i)=>{r.rotation.z=t*r.userData.speed});
-  pts.forEach((p,i)=>{p.position.y+=Math.sin(t*1.2+p.userData.phase)*.0015});
-  controls.update();
-  renderer.render(scene,camera);
-}
-window.__lucTran3DReady = true;
-document.querySelector("#status").textContent="3D model đã sẵn sàng · kéo để xoay · pinch để zoom";
-animate();
-addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
-
-</script>
-</body>
-</html>
+<div class="mist mist-a"></div><div class="mist mist-b"></div>
+<header class="topbar">
+  <a class="brand" href="#home"><span class="brand-seal">寒</span><span>Hàn Thiên Môn<small>寒天門 · SƠN MÔN</small></span></a>
+  <nav id="nav"><a href="#home">Sơn môn</a><a href="#members">Đệ tử</a><a href="#gallery">Ký ức</a><a href="#timeline">Môn sử</a></nav>
+  <div class="top-actions"><span id="userBadge" class="user-badge hidden"></span><button id="accountBtn" class="seal-btn">☯ Đăng nhập</button><button id="themeBtn" class="icon-btn">☾</button><button id="menuBtn" class="icon-btn menu-btn">☰</button></div>
+</header>
+<main id="home">
+<section class="hero">
+ <div class="hero-content">
+  <span class="eyebrow">☁ THIÊN ĐẠO · SƠN MÔN · 2026</span>
+  <h1>HÀN THIÊN<br><span>MÔN</span></h1>
+  <p class="hero-sub">Một phương trời tiên hiệp dành cho những người đồng hành. Lưu danh đệ tử, giữ lại từng đoạn ký ức và cùng nhau viết nên môn sử.</p>
+  <div class="hero-actions"><a class="btn primary" href="#members">Nhập môn</a><a class="btn ghost" href="#gallery">Xem ký ức</a></div>
+  <div class="stats"><div><b id="memberCount">0</b><span>Đệ tử</span></div><div><b id="memoryCount">0</b><span>Ký ức</span></div><div><b>2026</b><span>Kỷ nguyên</span></div></div>
+ </div>
+ <div class="hero-card"><div class="seal-xl">寒</div><div class="cloud-ring"></div><span class="card-kicker">寒天門</span><h3>Nhất niệm nhập tiên môn</h3><p>“Đồng hành vạn dặm, chẳng phụ một đời tri kỷ.”</p><div class="card-line"></div></div>
+</section>
+<section id="members" class="section">
+ <div class="section-head"><div><span class="eyebrow">☯ ĐỆ TỬ BẢNG</span><h2>Danh sách môn nhân</h2></div><input id="searchInput" class="search" type="search" placeholder="⌕ Tìm đạo hiệu, biệt danh..."></div>
+ <div id="membersGrid" class="members-grid"></div>
+</section>
+<section id="gallery" class="section alt"><div class="section-head"><div><span class="eyebrow">◈ TÀNG KINH CÁC</span><h2>Ký ức lưu ảnh</h2></div></div><div id="galleryGrid" class="gallery-grid"></div></section>
+<section id="timeline" class="section"><div class="section-head"><div><span class="eyebrow">☯ MÔN SỬ</span><h2>Hành trình Hàn Thiên</h2></div></div><div id="timelineList" class="timeline"></div></section>
+<section class="join-section"><div><span class="eyebrow">✦ NHẬP MÔN</span><h2>Ghi danh vào Hàn Thiên Môn</h2><p>Tạo tài khoản để lưu danh cá nhân. Dữ liệu tài khoản được lưu trong database SQLite của website.</p></div><button class="btn primary" id="joinBtn">Đăng ký môn nhân</button></section>
+</main>
+<footer><p>寒天門 · Hàn Thiên Môn · Giữ đạo tâm, giữ tình bằng hữu.</p><button id="topBtn" class="btn small">↑ Về sơn môn</button></footer>
+<dialog id="memberModal"><button class="modal-close" id="modalClose">×</button><div id="modalContent"></div></dialog>
+<dialog id="accountModal"><button class="modal-close" id="accountClose">×</button><div id="accountContent"></div></dialog>
+<script src="script.js"></script>
+</body></html>
